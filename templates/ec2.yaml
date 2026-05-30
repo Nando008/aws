@@ -3,6 +3,16 @@ Description: EC2 creada desde GitHub Actions
 
 Resources:
 
+  MySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Permitir HTTP
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
   MyEC2:
     Type: AWS::EC2::Instance
     Properties:
@@ -10,12 +20,28 @@ Resources:
       ImageId: ami-0cca150d127c2216f
       InstanceType: t3.micro
 
+      SecurityGroupIds:
+        - !Ref MySecurityGroup
+
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
+          yum update -y
+          yum install -y httpd
+
+          systemctl enable httpd
+          systemctl start httpd
+
           IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
-          echo "Hello World" > /tmp/hello.txt
-          echo "IP de la instancia: $IP" >> /tmp/hello.txt
+
+          cat > /var/www/html/index.html <<EOF
+          <html>
+          <body>
+            <h1>Hello World</h1>
+            <p>IP de la instancia: $IP</p>
+          </body>
+          </html>
+          EOF
 
       Tags:
         - Key: Name
